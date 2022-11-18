@@ -1,0 +1,16 @@
+[tool.poetry]
+name = " MultimodalResidualOptimization"
+version = "0.1.0"
+description = "Beyond Additive Fusion: Learning Non-Additive Multimodal Interactions"
+authors = ["Torsten Wörtwein <twoertwein@gmail.com>"]
+license = "BSD-3-Clause"
+
+[tool.poetry.dependencies]
+python = "^3.10,<3.11"
+python-tools = {git = "https://bitbucket.org/twoertwein/python-tools.git"}
+transformers = "^4.11.3"
+seaborn = "^0.11.2"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
