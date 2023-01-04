@@ -2,23 +2,25 @@
 import argparse
 from functools import partial
 from pathlib import Path
-from typing import Any, Final, Optional
+from typing import Any, Final
 
 import torch
 from python_tools.generic import namespace_as_string
 from python_tools.ml import metrics, neural
 from python_tools.ml.data_loader import DataLoader
 from python_tools.ml.default.neural_models import MLPModel
-from python_tools.ml.default.transformations import (DefaultTransformations,
-                                                     revert_transform,
-                                                     set_transform)
+from python_tools.ml.default.transformations import (
+    DefaultTransformations,
+    revert_transform,
+    set_transform,
+)
 from python_tools.ml.evaluator import evaluator
 
 from dataloader import IEMOCAP, MOSEI, MOSI, PANAM, SEWA, Instagram, Test
 from routing import MMRouting
 
-SEWA_DIMENSION = ("valence", "arousal")
-MOSEI_DIMENSION = (
+CCC_DIMENSION = ("valence", "arousal")
+MAE_DIMENSION = (
     # MOSEI
     "sentiment",
     "polarity",
@@ -28,13 +30,11 @@ MOSEI_DIMENSION = (
     # Test
     "uni",
     "bi",
-    "tri",
     # IEMOCAP
     "Valence",
     "Arousal",
-    "Dominance",
 )
-MEMOR_DIMENSION = ("constructs", "intent", "contextual", "semiotic")
+CLASS_DIMENSION = ("constructs", "intent")
 
 
 class RoutingTFN(neural.LossModule):
@@ -51,7 +51,7 @@ class RoutingTFN(neural.LossModule):
         input_sizes: tuple[int, ...],
         final_activation: dict[str, Any],
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(
             loss_function=kwargs.get("loss_function", "MSELoss"),
             attenuation=kwargs.get("attenuation", ""),
@@ -75,7 +75,7 @@ class RoutingTFN(neural.LossModule):
                 input_sizes,
             ]
         else:
-            assert False, input_sizes
+            raise AssertionError(input_sizes)
         # {MLP+TFN} routing, linear
         self.view_starts: Final = torch.cumsum(
             torch.LongTensor([0] + list(input_sizes)), dim=0
@@ -116,7 +116,7 @@ class RoutingTFN(neural.LossModule):
         self,
         x: torch.Tensor,
         meta: dict[str, torch.Tensor],
-        y: Optional[torch.Tensor] = None,
+        y: torch.Tensor | None = None,
         dataset: str = "",
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         # TFN + projection to capsule size
@@ -205,7 +205,7 @@ class MLP_mult(neural.LossModule):
         save: bool = True,
         only_tri: bool = False,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(
             loss_function=kwargs.get("loss_function", "MSELoss"),
             attenuation=kwargs.get("attenuation", ""),
@@ -280,7 +280,7 @@ class MLP_mult(neural.LossModule):
         self,
         x: torch.Tensor,
         meta: dict[str, torch.Tensor],
-        y: Optional[torch.Tensor] = None,
+        y: torch.Tensor | None = None,
         dataset: str = "",
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         # get uni-modal representations
@@ -341,7 +341,7 @@ class MLP_mult(neural.LossModule):
         ground_truth: torch.Tensor,
         meta: dict[str, torch.Tensor],
         take_mean: bool = True,
-        loss: Optional[torch.Tensor] = None,
+        loss: torch.Tensor | None = None,
     ) -> torch.Tensor:
         assert loss is None
         loss = 0
@@ -368,7 +368,7 @@ class MLP_parallel(neural.LossModule):
         input_size: int = -1,
         input_sizes: tuple[int, ...],
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(
             loss_function=kwargs.get("loss_function", "MSELoss"),
             attenuation=kwargs.get("attenuation", ""),
@@ -394,7 +394,7 @@ class MLP_parallel(neural.LossModule):
         self,
         x: torch.Tensor,
         meta: dict[str, torch.Tensor],
-        y: Optional[torch.Tensor] = None,
+        y: torch.Tensor | None = None,
         dataset: str = "",
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         xs = []
@@ -429,7 +429,7 @@ class MLP_detached_residual(neural.LossModule):
         naive_loss: bool = False,
         only_tri: bool = False,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(
             loss_function=kwargs.get("loss_function", "MSELoss"),
             attenuation=kwargs.get("attenuation", ""),
@@ -476,7 +476,7 @@ class MLP_detached_residual(neural.LossModule):
         self,
         x: torch.Tensor,
         meta: dict[str, torch.Tensor],
-        y: Optional[torch.Tensor] = None,
+        y: torch.Tensor | None = None,
         dataset: str = "",
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         y_uni, meta = self.uni_modals(x, meta, y=y, dataset=dataset)
@@ -522,7 +522,7 @@ class MLP_detached_residual(neural.LossModule):
         ground_truth: torch.Tensor,
         meta: dict[str, torch.Tensor],
         take_mean: bool = True,
-        loss: Optional[torch.Tensor] = None,
+        loss: torch.Tensor | None = None,
     ) -> torch.Tensor:
         assert loss is None
         loss = 0
@@ -565,16 +565,12 @@ def get_modalities(xs: list[str]) -> dict[str, list[str]]:
 def train(
     partitions: dict[int, dict[str, DataLoader]], folder: Path, args: argparse.Namespace
 ) -> None:
-    mosei = args.dimension in MOSEI_DIMENSION
-    panam = args.dimension == MEMOR_DIMENSION[1]
-    instagram = args.dimension in MEMOR_DIMENSION[2:]
-
     metric = "ccc"
     metric_fun = metrics.interval_metrics
     params = {
         "interval": True,
         "metric_max": True,
-        "y_names": partitions[0]["training"].properties["Y_names"].copy(),
+        "y_names": partitions[0]["training"].properties["y_names"].copy(),
     }
 
     grid_search = {
@@ -599,23 +595,23 @@ def train(
         grid_search["layer_sizes"] = [(5,), (10,), (10, 10)]
         metric = "mse"
         params["metric_max"] = False
-    elif mosei:
+    elif args.dimension in MAE_DIMENSION:
         grid_search["lr"].extend([0.005, 0.01, 0.05])
         grid_search["layer_sizes"].extend([(100, 20, 10), (100, 100, 10)])
         grid_search["weight_decay"].extend([0.0])
         metric = "mae"
         params["metric_max"] = False
         grid_search["loss_function"] = ["L1Loss"]
-    elif panam or instagram:
+    elif args.dimension in CLASS_DIMENSION:
         grid_search["lr"].extend([0.005, 0.01, 0.05])
-        if not instagram:
+        if args.dimension != "intent":
             grid_search["layer_sizes"].extend([(100, 20, 10), (100, 100, 10)])
         grid_search["weight_decay"].extend([0.0])
         grid_search["sample_weight"] = [False]
         grid_search["minmax"] = [False]
         params["interval"] = False
         params["nominal"] = True
-        params["y_names"] = partitions[0]["training"].properties["Y_names"].copy()
+        params["y_names"] = partitions[0]["training"].properties["y_names"].copy()
         metric_fun = metrics.nominal_metrics
         metric = "brier_score"
         params["metric_max"] = False
@@ -627,9 +623,9 @@ def train(
 
     model = MLPModel(device="cuda", **params)
 
-    x_names = partitions[0]["training"].properties["X_names"]
+    x_names = partitions[0]["training"].properties["x_names"]
     modalities = get_modalities(x_names.tolist())
-    assert partitions[0]["training"].properties["X_names"].tolist() == sum(
+    assert partitions[0]["training"].properties["x_names"].tolist() == sum(
         modalities.values(), []
     )
 
@@ -653,7 +649,9 @@ def train(
             grid_search["exclude_parameters_prefixes"] = [
                 (("bi_", "tri_"), ("uni_", "tri_"), ("uni_", "bi_"))
             ]
-            if instagram or (args.dimension in ("arousal",) and args.fs):
+            if args.dimension == "intent" or (
+                args.dimension in ("arousal",) and args.fs
+            ):
                 # only two modalities
                 grid_search["exclude_parameters_prefixes"] = [(("tri_",), ("uni_",))]
     else:
@@ -679,7 +677,9 @@ def train(
                     ("after.0", "after.1"),
                 )
             ]
-            if instagram or (args.dimension in ("arousal",) and args.fs):
+            if args.dimension == "intent" or (
+                args.dimension in ("arousal",) and args.fs
+            ):
                 # only two modalities
                 grid_search["exclude_parameters_prefixes"] = [
                     (("after.1",), ("after.0",))
@@ -716,7 +716,8 @@ def train(
         folder=folder,
         metric_fun=partial(
             metric_fun,
-            clustering=not mosei and not instagram,
+            clustering=args.dimension in CCC_DIMENSION
+            or args.dimension == "constructs",
             names=tuple(params["y_names"].tolist()),
         ),
         metric=metric,
@@ -732,11 +733,11 @@ def train(
 
 
 def combine_transformations(data, transform, model_transform=None):
-    if data.properties["Y_names"][0] in ("uni", "bi", "tri"):
-        transform["X"]["mean"][:] = 0
-        transform["X"]["std"][:] = 1
-        transform["Y"]["mean"][:] = 0
-        transform["Y"]["std"][:] = 1
+    if data.properties["y_names"][0] in ("uni", "bi"):
+        transform["x"]["mean"][:] = 0
+        transform["x"]["std"][:] = 1
+        transform["y"]["mean"][:] = 0
+        transform["y"]["std"][:] = 1
     data = set_transform(data, transform)
     data.add_transform(model_transform, optimizable=True)
     return data
@@ -747,7 +748,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dimension",
-        choices=list(SEWA_DIMENSION) + list(MOSEI_DIMENSION) + list(MEMOR_DIMENSION),
+        choices=list(CCC_DIMENSION) + list(MAE_DIMENSION) + list(CLASS_DIMENSION),
         default="valence",
     )
     parser.add_argument("--routing", action="store_const", const=True, default=False)
@@ -776,13 +777,13 @@ if __name__ == "__main__":
         loader_class = MOSI
     elif args.dimension[0] != args.dimension[0].lower():
         loader_class = IEMOCAP
-    elif args.dimension in ("uni", "bi", "tri"):
+    elif args.dimension in ("uni", "bi"):
         loader_class = Test
-    elif args.dimension in MOSEI_DIMENSION:
+    elif args.dimension in MAE_DIMENSION:
         loader_class = MOSEI
-    elif args.dimension == MEMOR_DIMENSION[1]:
+    elif args.dimension == "constructs":
         loader_class = PANAM
-    elif args.dimension in MEMOR_DIMENSION[2:]:
+    elif args.dimension == "intent":
         loader_class = Instagram
 
     data = {
