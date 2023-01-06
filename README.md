@@ -14,6 +14,8 @@ poetry update  # installs python-tools and all other dependencies
 ## Usage
 For early fusion
 ```sh
+# MRO
+python train.py --dimension <dimension> --res_det
 # baseline (joint)
 python train.py --dimension <dimension> --res_det --joint
 # only tri-modal branch
@@ -28,21 +30,23 @@ python train.py --dimension <dimension> --res_det --stepwise
 
 For tensor fusion
 ```sh
+# MRO
+python train.py --dimension <dimension> --mult --res_det
 # baseline (joint)
 python train.py --dimension <dimension> --mult
 # only tri-modal branch
 python train.py --dimension <dimension> --mult --tri
 # routing
 python train.py --dimension <dimension> --routing --mult 
-# MRO
-python train.py --dimension <dimension> --mult --res_det
 # sMRO
 python train.py --dimension <dimension> --mult --res_det --stepwise
 ```
 
-## Datasets
+Where `<dimension>` can be: `uni` (unimodal sanity check), `bi` (bimodal sanity check), `mosi` (sentiemnt on MOSI), `sentiment` (MOSEI), `polarity` (MOSEI), `happiness` (MOSEI), `Arousal` (IEMOCAP), `Valence` (IEMOCAP), `arousal` (SEWA), `valence` (SEWA), `constructs` (TPOT), or `intent` (Instagram).
 
-We will share the pre-processed features used for the machine-learning experiments when they are requested.
+## Data
+
+The pre-processed features used for the machine-learning experiments for the sanity checks and the Instagram dataset are part of this git repository. The features for MOSI, MOSEI, and TPOT are available [here](https://cmu.box.com/s/76pz4tbctt1az2ukvcpeqht97k6st5xc). If you want the features for [IEMOCAP](https://cmu.box.com/s/1sekj2jqyycvrygpzrajpgehr8kmit8e) and [SEWA](https://cmu.box.com/shared/static/5tbus1tb6dio2pw2v4yehwa53pek69vu.xz), please send us proof that you completed the data-sharing agreements required by those projects.
 
 ### TPOT
 
@@ -60,14 +64,6 @@ The creation of the Transitions in Parenting of Teens (TPOT) dataset was funded 
 }
 ```
 
-We use the same [multimodal features](https://cmu.box.com/s/o2lvyd2jc0c72dreq0w3bvdg9wg6g309) as in the following paper
+### Perception Study
 
-```bibtex
-@inproceedings{wortwein2021human,
-  title={Human-Guided Modality Informativeness for Affective States},
-  author={W{\"o}rtwein, Torsten and Sheeber, Lisa B and Allen, Nicholas and Cohn, Jeffrey F and Morency, Louis-Philippe},
-  booktitle={Proceedings of the 2021 International Conference on Multimodal Interaction},
-  pages={728--734},
-  year={2021}
-}
-```
+The aggregated scores from the perception study on IEMOCAP are in `perception_study_arousal.csv` and `perception_study_arousal.csv`. To synchronize the scores with the model output, please use the fields `meta_id`, `meta_begin`, and `meta_end`.
