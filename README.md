@@ -42,7 +42,7 @@ python train.py --dimension <dimension> --routing --mult
 python train.py --dimension <dimension> --mult --res_det --stepwise
 ```
 
-Where `<dimension>` can be: `uni` (unimodal sanity check), `bi` (bimodal sanity check), `mosi` (sentiemnt on MOSI), `sentiment` (MOSEI), `polarity` (MOSEI), `happiness` (MOSEI), `Arousal` (IEMOCAP), `Valence` (IEMOCAP), `arousal` (SEWA), `valence` (SEWA), `constructs` (TPOT), or `intent` (Instagram).
+Where `<dimension>` can be: `uni` (unimodal sanity check), `bi` (bimodal sanity check), `mosi` (sentiment on MOSI), `sentiment` (MOSEI), `polarity` (MOSEI), `happiness` (MOSEI), `Arousal` (IEMOCAP), `Valence` (IEMOCAP), `arousal` (SEWA), `valence` (SEWA), `constructs` (TPOT), or `intent` (Instagram).
 
 ## Data
 
