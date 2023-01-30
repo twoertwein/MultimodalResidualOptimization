@@ -694,7 +694,7 @@ def train(
     ]
     model.forward_names = tuple(list(model.forward_names) + new_names)
 
-    model.update_parameter(grid_search)
+    model.parameters.update(grid_search)
     models, parameters, model_transform = model.get_models()
 
     apply_transformation = partial(
