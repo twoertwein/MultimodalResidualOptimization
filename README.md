@@ -1,6 +1,6 @@
 # MultimodalResidualOptimization
 
-The code for ["Beyond Additive Fusion: Learning Non-Additive Multimodal Interactions"](paper.pdf) at Findings of EMNLP 2022.
+The code for ["Beyond Additive Fusion: Learning Non-Additive Multimodal Interactions"](https://aclanthology.org/2022.findings-emnlp.344/) at Findings of EMNLP 2022.
 
 
 ## Setup
