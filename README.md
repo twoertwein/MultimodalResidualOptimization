@@ -4,7 +4,7 @@ The code for ["Beyond Additive Fusion: Learning Non-Additive Multimodal Interact
 
 
 ## Setup
-This code base heavily relies on [python-tools](https://bitbucket.org/twoertwein/python-tools/src/master/) to conduct the machine learning experiements.
+This code base heavily relies on [python-tools](https://bitbucket.org/twoertwein/python-tools/src/master/) to conduct the machine learning experiments.
 ```sh
 git clone git@github.com:twoertwein/MultimodalResidualOptimization.git
 cd MultimodalResidualOptimization
